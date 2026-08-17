@@ -1,0 +1,158 @@
+\begin{comment}
+\begin{zsection}
+  \SECTION ranger \parents roboworld\_2d\_toolkit
+\end{zsection}
+\end{comment}
+
+\begin{axdef}
+	eps : \real \\
+	targetPos : \real \\
+	targetRadius : \real \\
+	timeStep : \real
+\end{axdef}
+\begin{circus}
+	\circchannel target \\
+	\circchannel targetTriggered : \boolean \\
+	\circchannel getPos : \real \\
+	\circchannel getVel : \real \\
+	\circchannel setPos : \real \\
+	\circchannel setVel : \real \\
+	\circchannel proceed
+\end{circus}
+\vspace{-0.6cm}
+\begin{circus}
+	\circprocess Environment \circdef \circbegin
+\end{circus}
+\vspace{-0.7cm}
+\circtoolsoff
+\begin{zed}
+	EnvState == [\mathbf{visible}\; pos : \real; \mathbf{visible}\; vel : \real; stepTimer : \real \\
+	\t1 inarg1 : \real; inarg2 : \real; targetTrig : \boolean; inarg3 : \circbool]
+\end{zed}
+%\begin{schema}{EnvState}
+%	\mathbf{visible}\; pos : \real; \mathbf{visible}\; vel : \real; time : \real; stepTimer : \real; tockTimer : \real
+%\end{schema}
+\circtoolson
+\begin{comment}
+\begin{zed}
+	EnvState == [pos : \real; vel : \real; stepTimer : \real; \\
+	\t1 inarg1 : \real; inarg2 : \real; targetTrig : \boolean; inarg3 : \circbool]
+\end{zed}
+\end{comment}
+\vspace{-1cm}
+\begin{circusaction}
+	\circstate EnvState
+\end{circusaction}
+\vspace{-1cm}
+\circtoolsoff
+\begin{circusaction}
+	Movement\_1 \circdef Movement\_2 \circinterrupt (stepTimer \geq timeStep) \\
+	Movement\_2 \circdef \lschexpract [\Lambda EnvState | \derivative{pos} = vel
+	\land \derivative{vel} = 0
+	\land \derivative{stepTimer} = 1] \rschexpract
+\end{circusaction}
+\circtoolson
+\begin{comment}
+\begin{circusaction}
+	Movement\_1 \circdef Movement\_2 \circseq \lcircguard (stepTimer \geq timeStep) \rcircguard \circguard \Skip \\
+	Movement\_2 \circdef \lschexpract [\Delta EnvState | \derivative{pos} = vel
+	\land \derivative{vel} = 0
+	\land \derivative{stepTimer} = 1] \rschexpract
+\end{circusaction}
+\end{comment}
+\begin{circusaction}
+	InputTriggers\_1 \circdef \\
+	\t1 \circif abs~(pos - targetPos) \leq targetRadius - eps \circthen InputTriggers\_2 \\
+	\t1 {} \circelse abs~(pos - targetPos) \geq targetRadius \circthen InputTriggers\_3 \\
+	\t1 {} \circelse abs~(pos - targetPos) \geq targetRadius - eps \\
+	\t2 {} \land abs~(pos - targetPos) \leq targetRadius \circthen InputTriggers\_4 \\
+	\t1 \circfi \\
+	InputTriggers\_2 \circdef targetTriggered!\true \then InputTriggers\_5 \\
+	InputTriggers\_3 \circdef targetTriggered!\false \then InputTriggers\_6 \\
+	InputTriggers\_4 \circdef \Skip \\
+	InputTriggers\_5 \circdef \Skip \\
+	InputTriggers\_6 \circdef \Skip
+\also
+	QueryUpd\_1 \circdef 
+	\t1 (getPos!pos \then QueryUpd\_2) \\
+	\t1 \extchoice (getVel!vel \then QueryUpd\_3) \\
+	\t1 \extchoice (setPos?x \then inarg1 := x \circseq QueryUpd\_4) \\
+	\t1 \extchoice (setVel?x \then inarg2 := x \circseq QueryUpd\_5)
+	\t1 \extchoice proceed \then QueryUpd\_6 \\
+	QueryUpd\_2 \circdef QueryUpd\_7 \circseq QueryUpd\_1 \\
+	QueryUpd\_3 \circdef QueryUpd\_8 \circseq QueryUpd\_1 \\
+	QueryUpd\_4 \circdef QueryUpd\_9 \circseq QueryUpd\_1 \\
+	QueryUpd\_5 \circdef QueryUpd\_10 \circseq QueryUpd\_1 \\
+	QueryUpd\_6 \circdef \Skip \\
+	QueryUpd\_7 \circdef \Skip \\
+	QueryUpd\_8 \circdef \Skip \\
+	QueryUpd\_9 \circdef pos := inarg1 \\
+	QueryUpd\_10 \circdef vel := inarg2 \\
+\also
+	EventBuffer\_1 \circdef EventBuffer\_2 \circseq EventBuffer\_3 \\
+	EventBuffer\_2 \circdef targetTrig := \false \\
+	EventBuffer\_3 \circdef \\
+	\t1 \circif targetTrig = \true \circthen EventBuffer\_4 \\
+	\t1 {} \circelse \lnot (targetTrig = \true) \circthen EventBuffer\_5 \\
+	\t1 \circfi \\
+	EventBuffer\_4 \circdef \\
+	\t1 targetTriggered?x \then inarg3 := x \circseq EventBuffer\_6 \\
+	\t1 {} \extchoice {} \\
+	\t1 target \then EventBuffer\_7 \\
+	EventBuffer\_5 \circdef targetTriggered?x \then inarg3 := x \circseq EventBuffer\_8 \\
+	EventBuffer\_6 \circdef EventBuffer\_9 \circseq EventBuffer\_3 \\
+	EventBuffer\_7 \circdef EventBuffer\_10 \circseq EventBuffer\_3 \\
+	EventBuffer\_8 \circdef EventBuffer\_11 \circseq EventBuffer\_3 \\
+	EventBuffer\_9 \circdef targetTrig := inarg3 \\
+	EventBuffer\_10 \circdef \Skip \\
+	EventBuffer\_11 \circdef targetTrig := inarg3
+\end{circusaction}
+\begin{comment}
+\begin{circusaction}
+	RangerLoop\_1 \circdef RangerLoop\_2 \circseq RangerLoop\_3 \\
+	RangerLoop\_2 \circdef stepTimer := 0 \\
+	RangerLoop\_3 \circdef Movement\_1 \circseq RangerLoop\_4 \\
+	RangerLoop\_4 \circdef InputTriggers\_1 \circseq RangerLoop\_5 \\
+	RangerLoop\_5 \circdef RangerLoop\_6 \circseq RangerLoop\_1 \\
+	RangerLoop\_6 \circdef QueryUpd\_1 \circseq RangerLoop\_7 \\
+	RangerLoop\_7 \circdef \Skip
+\end{circusaction}
+\end{comment}
+\circtoolsoff
+\begin{circusaction}
+	RangerLoop\_1 \circdef RangerLoop\_2 \circseq RangerLoop\_3 \\
+	RangerLoop\_2 \circdef stepTimer := 0 \\
+	RangerLoop\_3 \circdef Movement\_1 \circseq RangerLoop\_4 \\
+	RangerLoop\_4 \circdef InputTriggers\_1 \circseq RangerLoop\_5 \\
+	RangerLoop\_5 \circdef RangerLoop\_6 \circseq RangerLoop\_1 \\
+	RangerLoop\_6 \circdef QueryUpd\_1 \circtimedinterrupt \lcirctime 0 \rcirctime RangerLoop\_7 \\
+	RangerLoop\_7 \circdef \Skip
+\end{circusaction}
+\circtoolson
+\vspace{-0.5cm}
+\begin{circusaction}
+	\circspot (RangerLoop\_1 \lpar \{ pos, vel, stepTimer, inarg1, inarg2 \} | \lchanset targetTriggered \rchanset | \{ targetTrig, inarg3 \} \rpar EventBuffer\_1) \circhide \lchanset targetTriggered \rchanset
+\end{circusaction}
+\vspace{-1cm}
+\begin{circus}
+	\circend
+\end{circus}
+
+\begin{circus}
+	\circprocess Controller \circdef \circbegin
+	
+	Controller\_1 \circdef Controller\_2 \circseq Controller\_3 \\
+	Controller\_2 \circdef setVel!1 \then Controller\_4 \\
+	Controller\_3 \circdef setVel!(\negate 1) \then Controller\_5 \\
+	Controller\_4 \circdef target \then Controller\_6 \extchoice proceed \then Controller\_4 \\
+	Controller\_5 \circdef proceed \then Controller\_5 \\
+	Controller\_6 \circdef \Skip
+	
+	\circspot Controller\_1
+	\circend
+\end{circus}
+
+\begin{circus}
+	\circprocess Composition \circdef Environment \lpar \lchanset target, getPos, getVel, setPos, setVel, proceed \rchanset \rpar Controller \\
+	\t1 \circhide \lchanset target, getPos, getVel, setPos, setVel, proceed \rchanset
+\end{circus}

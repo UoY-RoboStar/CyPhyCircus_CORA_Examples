@@ -1,0 +1,668 @@
+\begin{comment}
+\begin{zsection}
+  \SECTION ranger \parents roboworld\_2d\_toolkit
+\end{zsection}
+\end{comment}
+
+\begin{axdef}
+	eps : \real
+\end{axdef}
+
+\subsection{Types}
+
+% The arena is two-dimensional.
+\begin{zed}
+	Position ~==~ \real \cross \real \\
+	Velocity ~==~ \real \cross \real \\
+	Acceleration ~==~ \real \cross \real \\
+	Orientation ~==~ \real \\
+	AngularVelocity ~==~ \real \\
+	AngularAcceleration ~==~ \real
+\end{zed}
+
+\begin{schema}{ArenaProperty}
+	% The arena is two-dimensional.
+	xwidth, ywidth : \real \\
+	gradient, windSpeed : \real \\
+	locations : \power Position
+\where
+	% The arena is two-dimensional.
+	locations = \{ x : 0 \upto xwidth; y : 0 \upto ywidth \}
+\end{schema}
+
+% The robot is a point mass.
+\begin{schema}{RobotProperty}
+	position : Position \\
+	velocity : Velocity \\
+	acceleration : Acceleration \\
+	orientation : Orientation \\
+	angularVelocity : AngularVelocity \\
+	angularAcceleration : AngularAcceleration
+\end{schema}
+
+% The arena has obstacles.
+\begin{axdef}
+	numObstacles : \nat
+\end{axdef}
+\begin{zed}
+	ObstacleID == 1 \upto numObstacles
+\end{zed}
+\begin{schema}{ObstacleProperty}
+	% The obstacles are circles.
+	radius : \real \\
+	position : Position \\
+	orientation : Orientation \\
+	locations : \power Position
+\where
+	% The obstacles are circles.
+	locations = circleLocs~position~orientation~radius
+\end{schema}
+
+\subsection{Channels}
+
+\subsubsection{Software channels}
+
+\begin{zed}
+	InOut ::= in | out
+\end{zed}
+\begin{circus}
+	\circchannel obstacle : InOut \\
+	\circchannel moveCall : \real \cross \real
+\end{circus}
+
+\begin{circus}
+	\circchannel tock
+\end{circus}
+\begin{axdef}
+	tockLength : \real
+\end{axdef}
+
+\subsubsection{Input event triggered channels}
+
+\begin{circus}
+	\circchannel obstacleTriggered : \boolean
+\end{circus}
+
+\subsubsection{Output clock reset channels}
+
+\begin{circus}
+	\circchannel moveHappened
+\end{circus}
+
+\subsubsection{Variable get/set channels}
+
+\begin{circus}
+	\circchannel getRobotPosition : Position \\
+	\circchannel getRobotVelocity : Velocity \\
+	\circchannel getRobotAcceleration : Acceleration \\
+	\circchannel getRobotOrientation : Orientation \\
+	\circchannel getRobotAngularVelocity : AngularVelocity \\
+	\circchannel getRobotAngularAcceleration : AngularAcceleration \\
+	\circchannel setRobotPosition : Position \\
+	\circchannel setRobotVelocity : Velocity \\
+	\circchannel setRobotAcceleration : Acceleration \\
+	\circchannel setRobotOrientation : Orientation \\
+	\circchannel setRobotAngularVelocity : AngularVelocity \\
+	\circchannel setRobotAngularAcceleration : AngularAcceleration
+\end{circus}
+
+\begin{circus}
+	\circchannel getMaxObstacleID : ObstacleID \\
+	\circchannel getObstaclePosition : ObstacleID \cross Position \\
+	\circchannel getObstacleOrientation : ObstacleID \cross Orientation
+\end{circus}
+
+\begin{circus}
+	\circchannel proceed
+\end{circus}
+
+\subsection{Global Constants}
+
+\begin{axdef}
+	arena : ArenaProperty \\ % arena is a region, so is static
+	obstacles : \seq ObstacleProperty % obstacles are multiple and static
+\end{axdef}
+
+% The arena has a floor.
+% no need for ground locations set in 2d
+
+\begin{axdef}
+\where
+	arena.gradient = 0\decimalpoint0 % The gradient of the ground is 0.0.
+\end{axdef}
+
+\begin{axdef}
+\where
+	\# obstacles \geq 2 \\ % The arena has at least 2 obstacles.
+	\forall obstacle : \ran obstacles @ obstacle.locations \subseteq arena.locations
+\end{axdef}
+
+\subsection{Environment}
+
+\begin{axdef}
+	timeStep : \real
+\end{axdef}
+
+\begin{circus}
+	\circprocess Environment \circdef \circbegin
+\end{circus}
+
+\subsubsection{Environment State}
+
+\begin{schema}{EventTimes}
+	obstacleTime : \real \\
+	obstacleOccurred : \boolean
+	\also
+	moveTime : \real \\
+	moveOccurred : \boolean
+\end{schema}
+\begin{schema}{EventTimesInit}
+	EventTimes~'
+\where
+	obstacleTime' = 0\decimalpoint0 \\
+	obstacleOccurred' = \false
+	\also
+	moveTime' = 0\decimalpoint0 \\
+	moveOccurred' = \false
+\end{schema}
+
+\circtoolsoff
+\begin{schema}{EnvironmentStateVars}
+	\mathbf{visible}\; robot : RobotProperty \\
+	time : \real \\
+	stepTimer : \real \\
+	tockTimer : \real \\
+	EventTimes
+\where
+	robot.position \in arena.locations
+\end{schema}
+\circtoolson
+\begin{comment}
+\begin{schema}{EnvironmentStateVars}
+	robot : RobotProperty \\
+	time : \real \\
+	stepTimer : \real \\
+	tockTimer : \real \\
+	EventTimes
+\end{schema}
+\end{comment}
+
+\begin{schema}{RobotAssumptions}
+	EnvironmentStateVars
+\where
+	robot.position \in arena.locations
+\end{schema}
+
+\begin{schema}{RobotCollisionAssumptions}
+	EnvironmentStateVars
+\where
+	\forall obstacle : \ran obstacles @ robot.position \notin obstacle.locations
+\end{schema}
+
+\begin{schema}{EnvironmentState}
+	EnvironmentStateVars \\
+	inarg1 : \real \cross \real \\
+	inarg2 : \real \cross \real \\
+	inarg3 : \real \cross \real \\
+	inarg4 : \real \\
+	inarg5 : \real \\
+	inarg6 : \real \\
+	inarg7 : \nat \\
+	inarg8 : \nat \\
+	obstacleTrig : \boolean \\
+	inarg9 : \boolean
+\where
+	RobotAssumptions \\
+	RobotCollisionAssumptions
+\end{schema}
+\begin{circusaction}
+	\circstate EnvironmentState
+\end{circusaction}
+
+\begin{schema}{EnvironmentStateInit}
+	EnvironmentState~'
+\where
+	time' = 0\decimalpoint0 \\
+	stepTimer' = 0\decimalpoint0 \\
+	tockTimer' = 0\decimalpoint0 \\
+	EventTimesInit
+\end{schema}
+
+\subsubsection{Robot Movement}
+
+\circtoolsoff
+\begin{schema}{RobotMovement}
+	\Lambda EnvironmentState
+\where
+	\derivative{robot.position} = robot.velocity \\
+	\derivative{robot.velocity} = robot.acceleration \\
+	\derivative{robot.acceleration} = (0,0) \\
+	\derivative{robot.orientation} = robot.angularVelocity \\
+	\derivative{robot.angularVelocity} = robot.angularAcceleration \\
+	\derivative{robot.angularAcceleration} = 0 \\
+	\derivative{time} = 1 \\
+	\derivative{stepTimer} = 1 \\
+	\derivative{tockTimer} = 1
+\end{schema}
+\circtoolson
+\begin{comment}
+\begin{schema}{RobotMovement}
+	\Delta EnvironmentState
+\where
+	\derivative{robot.position} = robot.velocity \\
+	\derivative{robot.velocity} = robot.acceleration \\
+	\derivative{robot.acceleration} = (0,0) \\
+	\derivative{robot.orientation} = robot.angularVelocity \\
+	\derivative{robot.angularVelocity} = robot.angularAcceleration \\
+	\derivative{robot.angularAcceleration} = 0 \\
+	\derivative{time} = 1 \\
+	\derivative{stepTimer} = 1 \\ 
+	\derivative{tockTimer} = 1
+\end{schema}
+\end{comment}
+
+\begin{zed}
+	\relation (robotObstacleCollision \varg)
+\end{zed}
+\begin{axdef}
+	robotObstacleCollision \varg : \power (RobotProperty \cross ObstacleProperty)
+\where
+	\forall robot : RobotProperty; obstacle : ObstacleProperty @ \\
+	\t1 robotObstacleCollision~(robot, obstacle) \iff robot.position \in obstacle.locations
+\end{axdef}
+
+\circtoolsoff
+\begin{circusaction}
+	RobotMovementAction\_1 \circdef \lschexpract RobotMovement \rschexpract \\
+	\t1 \circinterrupt \circblockbegin
+			% collision between robot and an obstacle
+			\exists obstacle : \ran obstacles @ robotObstacleCollision(robot, obstacle) \\
+			\t2 {} \land (robot.velocity \vecdotprod (obstacle.position \vecminus robot.position) > 0)) \\
+			% timeStep reached
+			{} \lor (stepTimer \geq timeStep)
+		\circblockend
+\end{circusaction}
+\circtoolson
+\begin{comment}
+\begin{circusaction}
+	RobotMovementAction\_1 \circdef \lschexpract RobotMovement \rschexpract \circseq
+	\lcircguard \circblockbegin
+			% collision between robot and an obstacle
+			\exists obstacle : \ran obstacles @ robotObstacleCollision(robot, obstacle) \\
+			% timeStep reached
+			{} \lor (stepTimer \geq timeStep)
+		\circblockend \rcircguard \circguard \Skip
+\end{circusaction}
+\end{comment}
+
+\subsubsection{Collision Detection}
+
+%\begin{circusaction}
+%	CollisionDetection \circdef \\
+%	\t1 RobotObstacleCollision
+%\end{circusaction}
+\begin{axdef}
+	collisionEps : \real
+\end{axdef}
+%\begin{schema}{HandleCollisionSchema}
+%	\Delta EnvironmentState
+%\where
+%	\exists \Delta RobotProperty | \\
+%	\t1 \Xi RobotProperty \hide (position', velocity') @ \\
+%	\t1 \exists initVel == velocity \vecminus collisionEps \scalarmult acceleration @ \\
+%	\t1 position' = position \vecminus (collisionEps \realdiv 2) \scalarmult  (initVel \vecplus velocity) \land {} \\
+%	\t1 velocity' = initVel \land {} \\
+%	\t1 \theta RobotProperty = robot \land robot' = \theta RobotProperty~' \\
+%	\Xi EnvironmentState \hide (robot')
+%\end{schema}
+\begin{comment}
+\begin{circusaction}
+	HandleCollision\_1 \circdef \\
+	\lschexpract [ \Delta EnvironmentState | 
+	\t1 robot'.position = \\
+	\t2 robot.position \vecminus {} \\
+	\t3 (collisionEps \realdiv 2) \scalarmult  (2 \scalarmult robot.velocity \vecminus collisionEps \scalarmult robot.acceleration) \land \\
+	\t1 robot.velocity = robot.velocity \vecminus collisionEps \scalarmult robot.acceleration ] \rschexpract
+\end{circusaction}
+\end{comment}
+\circtoolsoff
+\begin{circusaction}
+	HandleCollision\_1 \circdef \\
+	\t1 robot.position, robot.velocity := \\
+	\t2 robot.position \vecminus {} \\
+	\t3 (collisionEps \realdiv 2) \scalarmult  (2 \scalarmult robot.velocity \vecminus collisionEps \scalarmult robot.acceleration), \\
+	\t2 robot.velocity \vecminus collisionEps \scalarmult robot.acceleration \\ 
+\end{circusaction}
+\circtoolson
+
+\subsubsection{Input Triggers}
+
+\begin{circusaction}
+	InputTriggers\_1 \circdef obstacle\_InputEventMapping\_1 
+\end{circusaction}
+
+
+% When the distance from the robot to an obstacle is less than 0.5 m, the event obstacle occurs.
+\begin{circusaction}
+	obstacle\_InputEventMapping\_1 \circdef \\
+	\t1 \circif (\exists obstacle1 : \ran obstacles @ \exists loc : obstacle1.locations @ \\
+	\t2 (norm~(loc \vecminus robot.position) < 0\decimalpoint5 - eps)) \circthen obstacle\_InputEventMapping\_2 \\
+	\t1 {} \circelse \lnot (\exists obstacle1 : \ran obstacles @ \exists loc : obstacle1.locations @ \\
+	\t2 (norm~(loc \vecminus robot.position) < 0\decimalpoint5)) \circthen obstacle\_InputEventMapping\_3 \\
+	\t1 {} \circelse \lnot (\exists obstacle1 : \ran obstacles @ \exists loc : obstacle1.locations @ \\
+	\t2 (norm~(loc \vecminus robot.position) < 0\decimalpoint5 - eps)) \\
+	\t2 {} \land (\exists obstacle1 : \ran obstacles @ \exists loc : obstacle1.locations @ \\
+	\t2 (norm~(loc \vecminus robot.position) < 0\decimalpoint5)) \circthen obstacle\_InputEventMapping\_4 \\
+	\t1 \circfi \\
+	obstacle\_InputEventMapping\_2 \circdef \\
+	\t1 obstacleTriggered!\true \then obstacle\_InputEventMapping\_5 \\
+	obstacle\_InputEventMapping\_3 \circdef obstacleTriggered!\false \then obstacle\_InputEventMapping\_6 \\
+	obstacle\_InputEventMapping\_4 \circdef \Skip \\
+	obstacle\_InputEventMapping\_5 \circdef obstacleOccurred, obstacleTime := \true, time \\
+	obstacle\_InputEventMapping\_6 \circdef \Skip
+\end{circusaction}
+
+\subsubsection{Communication with Mapping Definitions}
+
+\circtoolsoff
+\begin{circusaction}
+	Communication\_1 \circdef \\
+	getRobotPosition!(robot.position) \then Communication\_2 \\
+	{} \extchoice {} \\
+	getRobotVelocity!(robot.velocity) \then Communication\_3 \\
+	{} \extchoice {} \\
+	getRobotAcceleration!(robot.acceleration) \then Communication\_4 \\
+	{} \extchoice {} \\
+	getRobotOrientation!(robot.orientation) \then Communication\_5 \\
+	{} \extchoice {} \\
+	getRobotAngularVelocity!(robot.angularVelocity) \then Communication\_6 \\
+	{} \extchoice {} \\
+	getRobotAngularAcceleration!(robot.angularAcceleration) \then Communication\_7 \\
+	{} \extchoice {} \\
+	setRobotPosition?x \then inarg1 := x \circseq Communication\_8 \\
+	{} \extchoice {} \\
+	setRobotVelocity?x \then inarg2 := x \circseq Communication\_9 \\
+	{} \extchoice {} \\
+	setRobotAcceleration?x \then inarg3 := x \circseq Communication\_10 \\
+	{} \extchoice {} \\
+	setRobotOrientation?x \then inarg4 := x \circseq Communication\_11 \\
+	{} \extchoice {} \\
+	setRobotAngularVelocity?x \then inarg5 := x \circseq Communication\_12 \\
+	{} \extchoice {} \\
+	setRobotAngularAcceleration?x \then inarg6 := x \circseq Communication\_13 \\
+	{} \extchoice {} \\
+	getMaxObstacleID!(numObstacles) \then Communication\_14 \\
+	{} \extchoice {} \\
+	getObstaclePosition?x!((obstacles~x).position) \then inarg7 := x \circseq Communication\_15 \\
+	{} \extchoice {} \\
+	getObstacleOrientation?x!((obstacles~x).orientation) \then inarg8 := x \circseq Communication\_16 \\
+	{} \extchoice {} \\
+	proceed \then Communication\_17 \\
+	Communication\_2 \circdef Communication\_18 \circseq Communication\_1 \\
+	Communication\_3 \circdef Communication\_19 \circseq Communication\_1 \\
+	Communication\_4 \circdef Communication\_20 \circseq Communication\_1 \\
+	Communication\_5 \circdef Communication\_21 \circseq Communication\_1 \\
+	Communication\_6 \circdef Communication\_22 \circseq Communication\_1 \\
+	Communication\_7 \circdef Communication\_23 \circseq Communication\_1 \\
+	Communication\_8 \circdef Communication\_24 \circseq Communication\_1 \\
+	Communication\_9 \circdef Communication\_25 \circseq Communication\_1 \\
+	Communication\_10 \circdef Communication\_26 \circseq Communication\_1 \\
+	Communication\_11 \circdef Communication\_27 \circseq Communication\_1 \\
+	Communication\_12 \circdef Communication\_28 \circseq Communication\_1 \\
+	Communication\_13 \circdef Communication\_29 \circseq Communication\_1 \\
+	Communication\_14 \circdef Communication\_30 \circseq Communication\_1 \\
+	Communication\_15 \circdef Communication\_31 \circseq Communication\_1 \\
+	Communication\_16 \circdef Communication\_32 \circseq Communication\_1 \\
+	Communication\_17 \circdef \Skip \\
+	Communication\_18 \circdef \Skip \\
+	Communication\_19 \circdef \Skip \\
+	Communication\_20 \circdef \Skip \\
+	Communication\_21 \circdef \Skip \\
+	Communication\_22 \circdef \Skip \\
+	Communication\_23 \circdef \Skip \\
+	Communication\_24 \circdef robot.position := inarg1 \\
+	Communication\_25 \circdef robot.velocity := inarg2 \\
+	Communication\_26 \circdef robot.acceleration := inarg3 \\
+	Communication\_27 \circdef robot.orientation := inarg4 \\
+	Communication\_28 \circdef robot.angularVelocity := inarg5 \\
+	Communication\_29 \circdef robot.angularAcceleration := inarg6 \\
+	Communication\_30 \circdef \Skip \\
+	Communication\_31 \circdef \Skip \\
+	Communication\_32 \circdef \Skip
+\end{circusaction}
+\circtoolson
+\begin{comment}
+\begin{circusaction}
+	Communication\_1 \circdef \\
+	getRobotPosition!(robot.position) \then Communication\_2 \\
+	{} \extchoice {} \\
+	getRobotVelocity!(robot.velocity) \then Communication\_3 \\
+	{} \extchoice {} \\
+	getRobotAcceleration!(robot.acceleration) \then Communication\_4 \\
+	{} \extchoice {} \\
+	getRobotOrientation!(robot.orientation) \then Communication\_5 \\
+	{} \extchoice {} \\
+	getRobotAngularVelocity!(robot.angularVelocity) \then Communication\_6 \\
+	{} \extchoice {} \\
+	getRobotAngularAcceleration!(robot.angularAcceleration) \then Communication\_7 \\
+	{} \extchoice {} \\
+	setRobotPosition?x \then inarg1 := x \circseq Communication\_8 \\
+	{} \extchoice {} \\
+	setRobotVelocity?x \then inarg2 := x \circseq Communication\_9 \\
+	{} \extchoice {} \\
+	setRobotAcceleration?x \then inarg3 := x \circseq Communication\_10 \\
+	{} \extchoice {} \\
+	setRobotOrientation?x \then inarg4 := x \circseq Communication\_11 \\
+	{} \extchoice {} \\
+	setRobotAngularVelocity?x \then inarg5 := x \circseq Communication\_12 \\
+	{} \extchoice {} \\
+	setRobotAngularAcceleration?x \then inarg6 := x \circseq Communication\_13 \\
+	{} \extchoice {} \\
+	getMaxObstacleID!(numObstacles) \then Communication\_14 \\
+	{} \extchoice {} \\
+	getObstaclePosition?x!((obstacles~x).position) \then inarg7 := x \circseq Communication\_15 \\
+	{} \extchoice {} \\
+	getObstacleOrientation?x!((obstacles~x).orientation) \then inarg8 := x \circseq Communication\_16 \\
+	{} \extchoice {} \\
+	proceed \then Communication\_17 \\
+	Communication\_2 \circdef Communication\_18 \circseq Communication\_1 \\
+	Communication\_3 \circdef Communication\_19 \circseq Communication\_1 \\
+	Communication\_4 \circdef Communication\_20 \circseq Communication\_1 \\
+	Communication\_5 \circdef Communication\_21 \circseq Communication\_1 \\
+	Communication\_6 \circdef Communication\_22 \circseq Communication\_1 \\
+	Communication\_7 \circdef Communication\_23 \circseq Communication\_1 \\
+	Communication\_8 \circdef Communication\_24 \circseq Communication\_1 \\
+	Communication\_9 \circdef Communication\_25 \circseq Communication\_1 \\
+	Communication\_10 \circdef Communication\_26 \circseq Communication\_1 \\
+	Communication\_11 \circdef Communication\_27 \circseq Communication\_1 \\
+	Communication\_12 \circdef Communication\_28 \circseq Communication\_1 \\
+	Communication\_13 \circdef Communication\_29 \circseq Communication\_1 \\
+	Communication\_14 \circdef Communication\_30 \circseq Communication\_1 \\
+	Communication\_15 \circdef Communication\_31 \circseq Communication\_1 \\
+	Communication\_16 \circdef Communication\_32 \circseq Communication\_1 \\
+	Communication\_17 \circdef \Skip \\
+	Communication\_18 \circdef \Skip \\
+	Communication\_19 \circdef \Skip \\
+	Communication\_20 \circdef \Skip \\
+	Communication\_21 \circdef \Skip \\
+	Communication\_22 \circdef \Skip \\
+	Communication\_23 \circdef \Skip \\
+	Communication\_24 \circdef inarg1 := inarg1 \\
+	Communication\_25 \circdef inarg2 := inarg2 \\
+	Communication\_26 \circdef inarg3 := inarg3 \\
+	Communication\_27 \circdef inarg4 := inarg4 \\
+	Communication\_28 \circdef inarg5 := inarg5 \\
+	Communication\_29 \circdef inarg6 := inarg6 \\
+	Communication\_30 \circdef \Skip \\
+	Communication\_31 \circdef \Skip \\
+	Communication\_32 \circdef \Skip
+\end{circusaction}
+\end{comment}
+
+\begin{circusaction}
+	CheckTock\_1 \circdef \\
+	\t1 \circif tockTimer \geq tockLength - eps \circthen CheckTock\_2 \\
+	\t1 {} \circelse tockTimer < tockLength - eps \circthen CheckTock\_3 \\
+	\t1 \circfi \\
+	CheckTock\_2 \circdef tock \then CheckTock\_4 \\
+	CheckTock\_3 \circdef \Skip \\
+	CheckTock\_4 \circdef tockTimer := 0\decimalpoint0
+\end{circusaction}
+
+\subsubsection{Input Event Buffers}
+
+\begin{circusaction}
+	InputEventBuffers\_1 \circdef obstacle\_Buffer\_1
+\end{circusaction}
+
+\begin{circusaction}
+	obstacle\_Buffer\_1 \circdef obstacle\_Buffer\_2 \circseq obstacle\_Buffer\_3 \\
+	obstacle\_Buffer\_2 \circdef obstacleTrig := \false \\
+	obstacle\_Buffer\_3 \circdef \\
+	\t1 \circif obstacleTrig = \true \circthen obstacle\_Buffer\_4 \\
+	\t1 {} \circelse obstacleTrig = \true \circthen obstacle\_Buffer\_5 \\
+	\t1 \circfi \\
+	obstacle\_Buffer\_4 \circdef \\
+	\t1 obstacleTriggered?x \then inarg9 := x \circseq obstacle\_Buffer\_6 \\
+	\t1 {} \extchoice {} \\
+	\t1 obstacle.in \then obstacle\_Buffer\_7 \\
+	obstacle\_Buffer\_5 \circdef obstacleTriggered?x \then inarg9 := x \circseq obstacle\_Buffer\_8 \\
+	obstacle\_Buffer\_6 \circdef obstacle\_Buffer\_9 \circseq obstacle\_Buffer\_3 \\
+	obstacle\_Buffer\_7 \circdef obstacle\_Buffer\_10 \circseq obstacle\_Buffer\_3 \\
+	obstacle\_Buffer\_8 \circdef obstacle\_Buffer\_11 \circseq obstacle\_Buffer\_3 \\
+	obstacle\_Buffer\_9 \circdef obstacleTrig := inarg9 \\
+	obstacle\_Buffer\_10 \circdef \Skip \\
+	obstacle\_Buffer\_11 \circdef obstacleTrig := inarg9
+\end{circusaction}
+%\begin{circusaction}
+%	obstacle\_Buffer\_1 \circdef obstacle\_Buffer\_false\_1 \\
+%	obstacle\_Buffer\_false\_1 \circdef \\
+%	\t1 obstacleTriggered.\false \then obstacle\_Buffer\_false\_1 \\
+%	\t1 {} \extchoice {} \\
+%	\t1 obstacleTriggered.\true \then obstacle\_Buffer\_true\_1 \\
+%	obstacle\_Buffer\_true\_1 \circdef \\
+%	\t1 obstacleTriggered.\false \then obstacle\_Buffer\_false\_1 \\
+%	\t1 {} \extchoice {} \\
+%	\t1 obstacleTriggered.\true \then obstacle\_Buffer\_true\_1 \\
+%	\t1 {} \extchoice {} \\
+%	\t1 obstacle.in \then obstacle\_Buffer\_true\_1
+%\end{circusaction}
+
+\subsubsection{Output Event Buffers}
+
+\begin{circusaction}
+	OutputEventBuffers\_1 \circdef move\_Buffer\_1
+\end{circusaction}
+
+\begin{circusaction}
+	move\_Buffer\_1 \circdef move\_Buffer\_2 \circseq move\_Buffer\_3 \\
+	move\_Buffer\_2 \circdef moveTime, moveOccurred := 0\decimalpoint0, \false \\
+	move\_Buffer\_3 \circdef moveHappened \then move\_Buffer\_4 \\
+	move\_Buffer\_4 \circdef move\_Buffer\_5 \circseq move\_Buffer\_3 \\
+	move\_Buffer\_5 \circdef moveOccurred, moveTime := \true, time
+\end{circusaction}
+
+\subsubsection{Environment main action}
+
+\begin{circusaction}
+	EventBuffers\_1 \circdef InputEventBuffers\_1 \lpar \emptyset | \emptyset | \{ moveTime, moveOccurred \} \rpar OutputEventBuffers\_1
+\end{circusaction}
+
+%time' = 0\decimalpoint0 \\
+%stepTimer' = 0\decimalpoint0 \\
+%tockTimer' = 0\decimalpoint0 \\
+%obstacleTime' = 0\decimalpoint0 \\
+%obstacleOccurred' = \false
+%moveTime' = 0\decimalpoint0 \\
+%moveOccurred' = \false
+
+\begin{circusaction}
+	EnvironmentLoop\_1 \circdef EnvironmentLoop\_2 \circseq EnvironmentLoop\_3 \\
+	EnvironmentLoop\_2 \circdef time, stepTimer, tockTimer, obstacleTime, obstacleOccurred := 0\decimalpoint0, 0\decimalpoint0, 0\decimalpoint0, 0\decimalpoint0, \false \\
+	EnvironmentLoop\_3 \circdef RobotMovementAction\_1 \circseq EnvironmentLoop\_4 \\
+	EnvironmentLoop\_4 \circdef EnvironmentLoop\_5 \circseq EnvironmentLoop\_3 \\
+	EnvironmentLoop\_5 \circdef \\
+	\t1 \circif stepTimer < timeStep - eps \circthen HandleCollision\_1 \\
+	\t1 {} \circelse stepTimer \geq timeStep - eps \circthen EnvironmentLoop\_6 \\
+	\t1 \circfi \\
+	EnvironmentLoop\_6 \circdef InputTriggers\_1 \circseq EnvironmentLoop\_7 \\
+	EnvironmentLoop\_7 \circdef Communication\_1 \circseq EnvironmentLoop\_8 \\
+	EnvironmentLoop\_8 \circdef CheckTock\_1 \circseq EnvironmentLoop\_9 \\
+	EnvironmentLoop\_9 \circdef stepTimer := 0 \\
+\end{circusaction}
+
+\begin{circusaction}
+	\circspot (EnvironmentLoop\_1 \lpar \{ robot, time, stepTimer, tockTimer, obstacleTime, obstacleOccurred \} | \lchanset obstacleTriggered \rchanset | \{ moveTime, moveOccurred \} \rpar EventBuffers\_1) \\
+	\t1 \circhide \lchanset obstacleTriggered \rchanset
+\end{circusaction}
+
+\begin{circus}
+	\circend
+\end{circus}
+
+\subsection{Mapping}
+
+% When the operation move(lv,av) is called,
+% 	the velocity of the robot is set to lv m/s in the direction of the orientation of the robot,
+% 	and the angular velocity of the robot is set to av rad/s.
+\begin{circus}
+	\circprocess move\_OperationMapping \circdef \circbegin
+\end{circus}
+
+\begin{schema}{Mapping\_State}
+	inarg10 : \real \\
+	inarg11 : \real \\
+	inarg12 : \real \\
+	inarg13 : \real \\
+	inarg14 : \real
+\end{schema}
+\begin{circusaction}
+	\circstate Mapping\_State
+\end{circusaction}
+
+\begin{circusaction}
+	move\_Semantics\_1 \circdef \\
+	\t1 moveCall?x1?x2 \then inarg10, inarg11 := x1, x2 \circseq move\_Semantics\_2 \\
+	\t1 {} \extchoice {} \\
+	\t1 proceed \then move\_Semantics\_1 \\
+	move\_Semantics\_2 \circdef \\
+	\t1 getRobotOrientation?x \then inarg12 := x \circseq move\_Semantics\_3 \\
+	move\_Semantics\_3 \circdef move\_Semantics\_4 \circseq move\_Semantics\_5 \\
+	move\_Semantics\_4 \circdef setRobotVelocity!(inarg10 \scalarmult orientationToVector~inarg12 ) \then move\_Semantics\_6 \\
+	move\_Semantics\_5 \circdef setRobotAngularVelocity!inarg11 \then move\_Semantics\_7 \\
+	move\_Semantics\_6 \circdef \Skip \\
+	move\_Semantics\_7 \circdef move\_Semantics\_8 \circseq move\_Semantics\_1 \\
+	move\_Semantics\_8 \circdef \Skip
+\end{circusaction}
+\begin{circusaction}
+	move\_Monitor\_1 \circdef moveCall?x1?x2 \then inarg13, inarg14 := x1, x2 \circseq move\_Monitor\_2 \\
+	move\_Monitor\_2 \circdef moveHappened \then move\_Monitor\_1
+\end{circusaction}
+\begin{circusaction}
+	\circspot move\_Semantics\_1 \lpar \emptyset | \lchanset moveCall \rchanset | \emptyset \rpar move\_Monitor\_1
+\end{circusaction}
+\begin{circus}
+	\circend
+\end{circus}
+
+\begin{circus}
+	\circprocess Mapping \circdef move\_OperationMapping
+\end{circus}
+
+\subsection{Composition}
+
+\begin{circus}
+	\circprocess RoboWorldDocument \circdef \\
+	\t1 (Environment \lpar \lchanset \\
+	\t1 getRobotPosition, getRobotVelocity, getRobotAcceleration, \\
+	\t1 getRobotOrientation, getRobotAngularVelocity, getRobotAngularAcceleration, \\
+	\t1 setRobotPosition, setRobotVelocity, setRobotAcceleration, \\
+	\t1 setRobotOrientation, setRobotAngularVelocity, setRobotAngularAcceleration, \\
+	\t1 getMaxObstacleID, getObstaclePosition, getObstacleOrientation, moveHappened, proceed \rchanset \rpar Mapping) \\
+	\t2 {} \circhide \lchanset \\
+	\t2 getRobotPosition, getRobotVelocity, getRobotAcceleration, \\
+	\t2 getRobotOrientation, getRobotAngularVelocity, getRobotAngularAcceleration, \\
+	\t2 setRobotPosition, setRobotVelocity, setRobotAcceleration, \\
+	\t2 setRobotOrientation, setRobotAngularVelocity, setRobotAngularAcceleration, \\
+	\t2 getMaxObstacleID, getObstaclePosition, getObstacleOrientation, moveHappened, proceed \rchanset
+\end{circus}
