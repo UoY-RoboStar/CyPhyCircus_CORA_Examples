@@ -1,9 +1,9 @@
 # Synchronisation labels
 
-(((EL |[obstacleTriggered]| (mB ||| oB)) \ (obstacleTriggered) |[...]| (mS |[moveCall]| mM)) \ (...)
+`(((EL |[obstacleTriggered]| (mB ||| oB)) \ (obstacleTriggered) |[...]| (mS |[moveCall]| mM)) \ (...)`
 
 channel                         | EnvironmentLoop | obstacle_Buffer | move_Buffer | move_Semantics | move_Monitor
------------------------------------------------------------------------------------------------------------------
+--------------------------------|-----------------|-----------------|-------------|----------------|-------------
 obstacle                        | no              | yes             | no          | no             | no
 moveCall                        | no              | no              | no          | yes            | yes
 tock                            | yes             | no              | no          | no             | no
@@ -26,32 +26,35 @@ getObstaclePosition             | yes             | no              | no        
 getObstacleOrientation          | yes             | no              | no          | no             | no
 proceed                         | yes             | no              | no          | yes            | no
 
-obstacle                        -> obstacle_oB                          `((EL |[..]| (mB ||| oB)) \ {..} |[..]| (mS |[..]| mM)) \ {..}`
-moveCall                        -> moveCall_mS_mM                       `((EL |[..]| (mB ||| oB)) \ {..} |[..]| (mS |[ moveCall ]| mM)) \ {..}`
-tock                            -> tock_EL                              `((EL |[..]| (mB ||| oB)) \ {..} |[..]| (mS |[..]| mM)) \ {..}`
-obstacleTriggered               -> obstacleTriggered_EL_oB_hidden       `((EL |[ obstacleTriggered ]| (mB ||| oB)) \ { obstacleTriggered } |[..]| (mS |[..]| mM)) \ {..}`
-moveHappened                    -> moveHappened_mB_mM_hidden            `((EL |[..]| (mB ||| oB)) \ {..} |[ moveHappended ]| (mS |[..]| mM)) \ { moveHappened }`
-getRobotPosition                -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotPosition ]| (mS |[..]| mM)) \ { getRobotPosition }`
-getRobotVelocity                -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotVelocity ]| (mS |[..]| mM)) \ { getRobotVelocity }`
-getRobotAcceleration            -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotAcceleration ]| (mS |[..]| mM)) \ { getRobotAcceleration }`
-getRobotOrientation             -> getRobotOrientation_EL_mS_hidden     `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotOrientation ]| (mS |[..]| mM)) \ { getRobotOrientation }`
-getRobotAngularVelocity         -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotAngularVelocity ]| (mS |[..]| mM)) \ { getRobotAngularVelocity }`
-getRobotAngularAcceleration     -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getRobotAngularAcceleration ]| (mS |[..]| mM)) \ { getRobotAngularAcceleration }`
-setRobotPosition                -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotPosition ]| (mS |[..]| mM)) \ { setRobotPosition }`
-setRobotVelocity                -> setRobotVelocity_EL_mS_hidden        `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotVelocity ]| (mS |[..]| mM)) \ { setRobotVelocity }`
-setRobotAcceleration            -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotAcceleration ]| (mS |[..]| mM)) \ { setRobotAcceleration }`
-setRobotOrientation             -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotOrientation ]| (mS |[..]| mM)) \ { setRobotOrientation }`
-setRobotAngularVelocity         -> setRobotAngularVelocity_EL_mS_hidden `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotAngularVelocity ]| (mS |[..]| mM)) \ { setRobotAngularVelocity }`
-setRobotAngularAcceleration     -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ setRobotAngularAcceleration ]| (mS |[..]| mM)) \ { setRobotAngularAcceleration }`
-getMaxObstacleID                -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getMaxObstacleID ]| (mS |[..]| mM)) \ { getMaxObstacleID }`
-getObstaclePosition             -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getObstaclePosition ]| (mS |[..]| mM)) \ { getObstaclePosition }`
-getObstacleOrientation          -> -                                    `((EL |[..]| (mB ||| oB)) \ {..} |[ getObstacleOrientation ]| (mS |[..]| mM)) \ { getObstacleOrientation }`
-proceed                         -> proceed_EL_mS_hidden                 `((EL |[..]| (mB ||| oB)) \ {..} |[ proceed ]| (mS |[..]| mM)) \ { proceed }`
+
+channel                         | labels                               | synchronisation structure
+--------------------------------|--------------------------------------|----------------------------------------------------------------------------------------------------------------------
+obstacle                        | obstacle_oB                          | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[..]\| (mS \|[..]\| mM)) \ {..}`
+moveCall                        | moveCall_mS_mM                       | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[..]\| (mS \|[ moveCall ]\| mM)) \ {..}`
+tock                            | tock_EL                              | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[..]\| (mS \|[..]\| mM)) \ {..}`
+obstacleTriggered               | obstacleTriggered_EL_oB_hidden       | `((EL \|[ obstacleTriggered ]\| (mB \|\|\| oB)) \ { obstacleTriggered } \|[..]\| (mS \|[..]\| mM)) \ {..}`
+moveHappened                    | moveHappened_mB_mM_hidden            | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ moveHappended ]\| (mS \|[..]\| mM)) \ { moveHappened }`
+getRobotPosition                | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotPosition ]\| (mS \|[..]\| mM)) \ { getRobotPosition }`
+getRobotVelocity                | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotVelocity ]\| (mS \|[..]\| mM)) \ { getRobotVelocity }`
+getRobotAcceleration            | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotAcceleration ]\| (mS \|[..]\| mM)) \ { getRobotAcceleration }`
+getRobotOrientation             | getRobotOrientation_EL_mS_hidden     | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotOrientation ]\| (mS \|[..]\| mM)) \ { getRobotOrientation }`
+getRobotAngularVelocity         | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotAngularVelocity ]\| (mS \|[..]\| mM)) \ { getRobotAngularVelocity }`
+getRobotAngularAcceleration     | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getRobotAngularAcceleration ]\| (mS \|[..]\| mM)) \ { getRobotAngularAcceleration }`
+setRobotPosition                | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotPosition ]\| (mS \|[..]\| mM)) \ { setRobotPosition }`
+setRobotVelocity                | setRobotVelocity_EL_mS_hidden        | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotVelocity ]\| (mS \|[..]\| mM)) \ { setRobotVelocity }`
+setRobotAcceleration            | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotAcceleration ]\| (mS \|[..]\| mM)) \ { setRobotAcceleration }`
+setRobotOrientation             | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotOrientation ]\| (mS \|[..]\| mM)) \ { setRobotOrientation }`
+setRobotAngularVelocity         | setRobotAngularVelocity_EL_mS_hidden | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotAngularVelocity ]\| (mS \|[..]\| mM)) \ { setRobotAngularVelocity }`
+setRobotAngularAcceleration     | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ setRobotAngularAcceleration ]\| (mS \|[..]\| mM)) \ { setRobotAngularAcceleration }`
+getMaxObstacleID                | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getMaxObstacleID ]\| (mS \|[..]\| mM)) \ { getMaxObstacleID }`
+getObstaclePosition             | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getObstaclePosition ]\| (mS \|[..]\| mM)) \ { getObstaclePosition }`
+getObstacleOrientation          | -                                    | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ getObstacleOrientation ]\| (mS \|[..]\| mM)) \ { getObstacleOrientation }`
+proceed                         | proceed_EL_mS_hidden                 | `((EL \|[..]\| (mB \|\|\| oB)) \ {..} \|[ proceed ]\| (mS \|[..]\| mM)) \ { proceed }`
 
 # EnvironmentLoop
 
 Action                       | start | end | kind                                                                                                   | new locations
--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------|-------|-----|--------------------------------------------------------------------------------------------------------|--------------
 EnvironmentLoop_1            | 1     | 2   | seq comp (EnvironmentLoop_2, EnvironmentLoop_3)                                                        | 3
 EnvironmentLoop_2            | 1     | 3   | assignment                                                                                             | -
 EnvironmentLoop_3            | 3     | 2   | seq comp (RobotMovementAction_1, EnvironmentLoop_4)                                                    | 4
@@ -131,7 +134,7 @@ EnvironmentLoop_9            | 24    | 3   | assignment                         
 # obstacle_Buffer
 
 Action             | start | end | kind                                                         | new locations
----------------------------------------------------------------------------------------------------------------
+-------------------|-------|-----|--------------------------------------------------------------|--------------
 obstacle_Buffer_1  | 1     | 2   | seq comp (obstacle_Buffer_2, obstacle_Buffer_3)              | 3
 obstacle_Buffer_2  | 1     | 3   | assignment                                                   | -
 obstacle_Buffer_3  | 3     | 2   | conditional (obstacle_Buffer_4, obstacle_Buffer_5)           | 4, 5
@@ -161,7 +164,7 @@ obstacle_Buffer_11 | 11    | 3   | assignment                                   
 # move_Buffer
 
 Action          | start | end   | kind                                          | new locations
------------------------------------------------------------------------------------------------
+----------------|---------------------------------------------------------------|--------------
 move_Buffer_1   | 1     | 2     | seq comp (move_Buffer_2, move_Buffer_3)       | 3
 move_Buffer_2   | 1     | 3     | assignment                                    | -
 move_Buffer_3   | 3     | 2     | moveHappened comm, 1 label (move_Buffer_4)    | 4
@@ -176,7 +179,7 @@ move_Buffer_5   | 4     | 3     | assignment                                    
 # move_Semantics
 
 Action                  |start  | end   | kind                                                          | new locations
------------------------------------------------------------------------------------------------------------------------
+------------------------|-------|-------|---------------------------------------------------------------|--------------
 move_Semantics_1        | 1     | 2     | ext choice                                                    | 
  - comm 1               | 1     | 2     | moveCall input comm, 1 label (move_Semantics_2)               | 3, 4
  - comm 2               | 1     | 2     | proceed comm, 1 label (move_Semantics_1) loop                 | -
@@ -203,7 +206,7 @@ move_Semantics_8        | 11    | 1     | Skip                                  
 # move_Monitor
 
 Action          | start | end | kind                                            | new locations
------------------------------------------------------------------------------------------------
+----------------|-------|-----|-------------------------------------------------|--------------
 move_Monitor_1  | 1     | 2   | moveCall input comm, 1 label (move_Monitor_2)   | 3, 4
 move_Monitor_2  | 4     | 2   | moveHappened comm, 1 label (move_Monitor_1)     | -
 
